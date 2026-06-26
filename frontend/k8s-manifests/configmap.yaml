@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aiops-frontend-config
+  namespace: default
+data:
+  api-url: "http://aiops-backend.default.svc.cluster.local:8000"

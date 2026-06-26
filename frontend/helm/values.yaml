@@ -1,0 +1,31 @@
+replicaCount: 2
+
+image:
+  repository: aiops-frontend
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: aiops.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+config:
+  apiUrl: "http://aiops-backend:8000"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
