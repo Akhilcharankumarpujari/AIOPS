@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import { JenkinsJob, JenkinsBuild } from '@/types';
+import { JenkinsJob, JenkinsBuild, AIAnalysis, JenkinsJobDetail } from '@/types';
 
 export const jenkinsService = {
   listJobs: async () => {
@@ -8,7 +8,7 @@ export const jenkinsService = {
   },
 
   getJobDetails: async (jobName: string) => {
-    const { data } = await apiClient.get<any>(`/api/v1/jenkins/jobs/${jobName}`);
+    const { data } = await apiClient.get<JenkinsJobDetail>(`/api/v1/jenkins/jobs/${jobName}`);
     return data;
   },
 
@@ -20,7 +20,7 @@ export const jenkinsService = {
   },
 
   getBuildDetails: async (jobName: string, buildNumber: number) => {
-    const { data } = await apiClient.get<any>(`/api/v1/jenkins/jobs/${jobName}/builds/${buildNumber}`);
+    const { data } = await apiClient.get<JenkinsBuild>(`/api/v1/jenkins/jobs/${jobName}/builds/${buildNumber}`);
     return data;
   },
 
@@ -42,7 +42,7 @@ export const jenkinsService = {
   },
 
   analyzeBuild: async (jobName: string, buildNumber: number) => {
-    const { data } = await apiClient.post<any>(`/api/v1/jenkins/jobs/${jobName}/builds/${buildNumber}/analyze`);
+    const { data } = await apiClient.post<AIAnalysis>(`/api/v1/jenkins/jobs/${jobName}/builds/${buildNumber}/analyze`);
     return data;
   },
 };

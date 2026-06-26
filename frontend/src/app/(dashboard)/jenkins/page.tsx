@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { jenkinsService } from '@/services/jenkins.service';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
@@ -11,7 +11,8 @@ import { Drawer } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/contexts/auth-context';
-import { Play, Square, Terminal, Brain, RefreshCw, Layers, CheckCircle2 } from 'lucide-react';
+import { Play, Brain, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { JenkinsBuild, AIAnalysis } from '@/types';
 
 export default function JenkinsPage() {
   const queryClient = useQueryClient();
@@ -28,7 +29,7 @@ export default function JenkinsPage() {
   const [consoleLogBuild, setConsoleLogBuild] = useState<{ name: string; num: number } | null>(null);
   const [consoleLogOpen, setConsoleLogOpen] = useState(false);
 
-  const [aiReportDetails, setAiReportDetails] = useState<any | null>(null);
+  const [aiReportDetails, setAiReportDetails] = useState<AIAnalysis | null>(null);
   const [aiReportOpen, setAiReportOpen] = useState(false);
 
   // --- QUERY HOOKS ---
@@ -61,8 +62,9 @@ export default function JenkinsPage() {
       setTriggerParams('');
       toast('Success', 'Jenkins build triggered successfully', 'success');
     },
-    onError: (err: any) => {
-      toast('Action Failed', err.response?.data?.error?.message || 'Failed to trigger build', 'error');
+    onError: (err) => {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      toast('Action Failed', error.response?.data?.error?.message || 'Failed to trigger build', 'error');
     },
   });
 
@@ -84,8 +86,9 @@ export default function JenkinsPage() {
       setAiReportOpen(true);
       toast('Success', 'AI build failure analysis complete', 'success');
     },
-    onError: (err: any) => {
-      toast('RCA Diagnostic Failure', err.response?.data?.error?.message || 'Failed to analyze logs', 'error');
+    onError: (err) => {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      toast('RCA Diagnostic Failure', error.response?.data?.error?.message || 'Failed to analyze logs', 'error');
     },
   });
 
@@ -267,7 +270,7 @@ export default function JenkinsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {jobDetails.builds.map((build: any) => (
+                      {jobDetails.builds.map((build: JenkinsBuild) => (
                         <tr key={build.number} className="border-b border-zinc-900/60 hover:bg-zinc-800/10">
                           <td className="py-2 px-3 font-semibold text-zinc-300">#{build.number}</td>
                           <td className="py-2 px-3">{getResultBadge(build.result)}</td>
@@ -421,7 +424,7 @@ export default function JenkinsPage() {
               <div className="space-y-2">
                 <span className="font-semibold text-zinc-400 block uppercase tracking-wider text-[10px]">Actionable Remediation</span>
                 <div className="space-y-2">
-                  {aiReportDetails.recommendations.map((rec: any, idx: number) => {
+                  {aiReportDetails.recommendations.map((rec: string | { action: string }, idx: number) => {
                     const action = typeof rec === 'string' ? rec : rec.action;
                     return (
                       <div key={idx} className="flex items-start space-x-3 p-2.5 rounded bg-zinc-950/40 border border-zinc-900">

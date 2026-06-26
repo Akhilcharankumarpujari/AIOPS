@@ -29,8 +29,9 @@ export default function LoginPage() {
       await login({ email, password });
       toast('Success', 'Successfully logged in', 'success');
       router.push('/dashboard');
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error?.message || 'Invalid credentials';
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      const errMsg = error.response?.data?.error?.message || 'Invalid credentials';
       toast('Login Failed', errMsg, 'error');
     } finally {
       setSubmitting(false);
@@ -92,7 +93,7 @@ export default function LoginPage() {
           </Button>
           
           <div className="text-center text-xs text-zinc-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="text-purple-400 hover:underline">
               Sign up
             </Link>

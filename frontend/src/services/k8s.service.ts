@@ -20,7 +20,7 @@ export const k8sService = {
   },
 
   getPodDetails: async (name: string, namespace: string) => {
-    const { data } = await apiClient.get<any>(`/api/v1/k8s/pods/${name}`, {
+    const { data } = await apiClient.get<Pod>(`/api/v1/k8s/pods/${name}`, {
       params: { namespace },
     });
     return data;

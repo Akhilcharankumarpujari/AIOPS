@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/contexts/toast-context';
-import { AlertTriangle, ShieldCheck, Clock, Search, Sliders } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, Clock, Search } from 'lucide-react';
 
 export default function AlertsPage() {
   const { toast } = useToast();

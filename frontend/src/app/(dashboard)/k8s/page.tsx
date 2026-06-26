@@ -18,14 +18,7 @@ import {
   RefreshCw,
   Trash2,
   Sliders,
-  Play,
-  RotateCcw,
-  Cpu,
-  Info,
-  Calendar,
-  Layers,
-  Activity,
-  UserCheck
+  RotateCcw
 } from 'lucide-react';
 
 export default function KubernetesPage() {
@@ -101,8 +94,9 @@ export default function KubernetesPage() {
       queryClient.invalidateQueries({ queryKey: ['pods'] });
       toast('Success', 'Pod deleted successfully', 'success');
     },
-    onError: (err: any) => {
-      toast('Action Failed', err.response?.data?.error?.message || 'Failed to delete pod', 'error');
+    onError: (err) => {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      toast('Action Failed', error.response?.data?.error?.message || 'Failed to delete pod', 'error');
     },
   });
 
@@ -114,8 +108,9 @@ export default function KubernetesPage() {
       toast('Success', 'Deployment scaling triggered', 'success');
       setScaleDialogOpen(false);
     },
-    onError: (err: any) => {
-      toast('Action Failed', err.response?.data?.error?.message || 'Failed to scale deployment', 'error');
+    onError: (err) => {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      toast('Action Failed', error.response?.data?.error?.message || 'Failed to scale deployment', 'error');
     },
   });
 
@@ -126,8 +121,9 @@ export default function KubernetesPage() {
       queryClient.invalidateQueries({ queryKey: ['deployments'] });
       toast('Success', 'Deployment rollout restart triggered', 'success');
     },
-    onError: (err: any) => {
-      toast('Action Failed', err.response?.data?.error?.message || 'Failed to restart deployment', 'error');
+    onError: (err) => {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      toast('Action Failed', error.response?.data?.error?.message || 'Failed to restart deployment', 'error');
     },
   });
 

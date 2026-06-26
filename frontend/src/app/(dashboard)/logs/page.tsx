@@ -4,12 +4,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { lokiService } from '@/services/loki.service';
 import { k8sService } from '@/services/k8s.service';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/contexts/toast-context';
-import { ShieldAlert, Play, Square, Download, Search, Terminal } from 'lucide-react';
+import { Play, Square, Download, Search, Terminal } from 'lucide-react';
 
 interface LogMessage {
   timestamp: string;
@@ -42,7 +42,7 @@ export default function LogsPage() {
   });
 
   // Query logs historically
-  const { data: historicalLogs, isLoading: isLogsLoading, refetch: fetchHistory } = useQuery({
+  const { data: historicalLogs, isLoading: isLogsLoading } = useQuery({
     queryKey: ['logs', namespace, selectedPod, query, severityFilter],
     queryFn: () =>
       lokiService.searchLogs({
@@ -106,7 +106,7 @@ export default function LogsPage() {
           level: raw.severity || raw.level || 'info',
         };
         setLogs((prev) => [...prev.slice(-499), newLine]); // Max 500 lines cache
-      } catch (err) {
+      } catch {
         // SSE might send plain lines
         const newLine: LogMessage = {
           timestamp: new Date().toISOString(),

@@ -2,12 +2,11 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { k8sService } from '@/services/k8s.service';
 import { prometheusService } from '@/services/prometheus.service';
 import { incidentsService } from '@/services/incidents.service';
 import { alertsService } from '@/services/alerts.service';
-import { Badge } from '@/components/ui/badge';
 import {
   AreaChart,
   Area,
@@ -22,7 +21,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { ShieldCheck, Cpu, Terminal, Activity, AlertTriangle, Play, HelpCircle, HardDrive } from 'lucide-react';
+import { ShieldCheck, Cpu, Activity, AlertTriangle } from 'lucide-react';
 
 const COLORS = ['#8b5cf6', '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 

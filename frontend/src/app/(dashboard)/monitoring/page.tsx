@@ -16,9 +16,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar
+  ResponsiveContainer
 } from 'recharts';
 import { RefreshCw, Cpu, Activity, HardDrive, Network } from 'lucide-react';
 

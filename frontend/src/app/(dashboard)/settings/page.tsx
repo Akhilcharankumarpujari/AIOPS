@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/contexts/toast-context';
-import { Settings as SettingsIcon, Shield, Sliders, User, BellRing } from 'lucide-react';
+import { Sliders, User, BellRing } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user } = useAuth();

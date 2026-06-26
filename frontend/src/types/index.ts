@@ -135,6 +135,7 @@ export interface Incident {
   system_id?: string;
   creator_id: string;
   assignee_id?: string;
+  assignee?: { id: string; email: string; full_name: string } | null;
   detected_at: string;
   acknowledged_at?: string | null;
   mitigated_at?: string | null;
@@ -154,7 +155,7 @@ export interface IncidentEvent {
   actor_id?: string | null;
   actor?: { id: string; email: string; full_name: string } | null;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -194,7 +195,6 @@ export interface AIAnalysis {
   created_at: string;
 }
 
-// Jenkins Types
 export interface JenkinsJob {
   name: string;
   url: string;
@@ -202,6 +202,18 @@ export interface JenkinsJob {
   last_build_number?: number;
   last_build_status?: string;
 }
+
+export interface JenkinsHealthReport {
+  score: number;
+  description: string;
+}
+
+export interface JenkinsJobDetail extends JenkinsJob {
+  health_report?: JenkinsHealthReport[];
+  health_reports?: JenkinsHealthReport[];
+  builds: JenkinsBuild[];
+}
+
 
 export interface JenkinsBuild {
   number: number;

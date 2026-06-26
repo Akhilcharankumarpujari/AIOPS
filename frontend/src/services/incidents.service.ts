@@ -11,7 +11,7 @@ export const incidentsService = {
     page?: number;
     size?: number;
   }) => {
-    const { data } = await apiClient.get<any>('/api/v1/incidents/', {
+    const { data } = await apiClient.get<{ items: Incident[]; total: number; page: number; size: number; pages: number }>('/api/v1/incidents/', {
       params,
     });
     return data;

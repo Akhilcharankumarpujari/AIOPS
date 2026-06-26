@@ -19,7 +19,7 @@ export const alertsService = {
   },
 
   listCorrelatedAlerts: async () => {
-    const { data } = await apiClient.get<any[]>('/api/v1/alerts/incidents');
+    const { data } = await apiClient.get<unknown[]>('/api/v1/alerts/incidents');
     return data;
   },
 

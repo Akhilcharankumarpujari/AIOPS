@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { incidentsService } from '@/services/incidents.service';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -14,22 +14,18 @@ import { useAuth } from '@/contexts/auth-context';
 import { usersService } from '@/services/users.service';
 import {
   Search,
-  Activity,
-  AlertTriangle,
   Clock,
-  User,
-  ArrowRight,
   Brain,
   MessageSquarePlus,
-  RefreshCw,
   Plus
 } from 'lucide-react';
 import Link from 'next/link';
+import { Incident } from '@/types';
 
 export default function IncidentsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  useAuth();
 
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
@@ -95,8 +91,9 @@ export default function IncidentsPage() {
       setTransitionMsg('');
       toast('Success', 'Incident status updated', 'success');
     },
-    onError: (err: any) => {
-      toast('Failed to Transition', err.response?.data?.error?.message || 'Unauthorized action', 'error');
+    onError: (err) => {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      toast('Failed to Transition', error.response?.data?.error?.message || 'Unauthorized action', 'error');
     },
   });
 
@@ -209,7 +206,7 @@ export default function IncidentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {incidentsList.items.map((inc: any) => (
+                 {incidentsList.items.map((inc: Incident) => (
                   <tr key={inc.id} className="border-b border-zinc-800/40 hover:bg-zinc-800/20">
                     <td className="py-3 px-4 font-mono font-semibold text-zinc-400">#{inc.incident_number}</td>
                     <td className="py-3 px-4">

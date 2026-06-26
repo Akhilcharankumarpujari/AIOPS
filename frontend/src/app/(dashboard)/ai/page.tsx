@@ -4,11 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { incidentsService } from '@/services/incidents.service';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/contexts/toast-context';
-import { Brain, ShieldAlert, Cpu, Sparkles, CheckCircle2, ChevronRight, RefreshCw, Layers } from 'lucide-react';
+import { Brain, Sparkles, CheckCircle2, ChevronRight } from 'lucide-react';
 
 export default function AIRCAPage() {
   const queryClient = useQueryClient();
@@ -31,12 +31,7 @@ export default function AIRCAPage() {
     enabled: !!selectedAnalysisId,
   });
 
-  // Fetch specific incident details if linked from incident dashboard
-  const { data: activeIncident } = useQuery({
-    queryKey: ['activeIncident', queryIncidentId],
-    queryFn: () => incidentsService.getIncident(queryIncidentId!),
-    enabled: !!queryIncidentId,
-  });
+
 
   // --- MUTATION HOOKS ---
   const analyzeMutation = useMutation({
@@ -54,8 +49,9 @@ export default function AIRCAPage() {
       setSelectedAnalysisId(data.id);
       toast('Success', 'AI analysis complete! Report generated.', 'success');
     },
-    onError: (err: any) => {
-      toast('AI Diagnostic Failure', err.response?.data?.error?.message || 'RCA Engine error', 'error');
+    onError: (err) => {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      toast('AI Diagnostic Failure', error.response?.data?.error?.message || 'RCA Engine error', 'error');
     },
   });
 
@@ -70,7 +66,7 @@ export default function AIRCAPage() {
         analyzeMutation.mutate({ type: 'incident', id: queryIncidentId });
       }
     }
-  }, [queryIncidentId, aiHistory]);
+  }, [queryIncidentId, aiHistory, analyzeMutation]);
 
   // Handle click on list
   const handleSelectReport = (id: string) => {

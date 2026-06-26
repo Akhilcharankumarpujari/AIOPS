@@ -41,8 +41,9 @@ export default function RegisterPage() {
       await register({ email, full_name: fullName, password });
       toast('Success', 'Account created successfully', 'success');
       router.push('/dashboard');
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error?.message || 'Failed to register account';
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      const errMsg = error.response?.data?.error?.message || 'Failed to register account';
       toast('Registration Failed', errMsg, 'error');
     } finally {
       setSubmitting(false);

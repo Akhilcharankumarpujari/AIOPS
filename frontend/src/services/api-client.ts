@@ -39,17 +39,21 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as CustomAxiosRequestConfig;
 
     if (!originalRequest) {
       return Promise.reject(error);
     }
 
     // Check if error is 401 and request wasn't already retried
-    if (error.response?.status === 401 && !(originalRequest as any)._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url === '/api/v1/auth/refresh' || originalRequest.url === '/api/v1/auth/login') {
         return Promise.reject(error);
       }
@@ -67,7 +71,7 @@ apiClient.interceptors.response.use(
           .catch((err) => Promise.reject(err));
       }
 
-      (originalRequest as any)._retry = true;
+      originalRequest._retry = true;
       isRefreshing = true;
 
       const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
