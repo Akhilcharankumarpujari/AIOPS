@@ -2,11 +2,8 @@ pipeline {
     agent any
 
     options {
-        // Prevent concurrent builds on the same workspace to avoid lock conflicts
         disableConcurrentBuilds()
-        // Skip subsequent stages if any stage is unstable or fails
         skipStagesAfterUnstable()
-        // Enforce a timeout of 30 minutes to prevent hung pipelines
         timeout(time: 30, unit: 'MINUTES')
     }
 
@@ -14,7 +11,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '=== Stage: Checkout ==='
-                // Explicitly checkout source code from Git repository
                 checkout scm
             }
         }
@@ -22,7 +18,6 @@ pipeline {
         stage('Verify Tools') {
             steps {
                 echo '=== Stage: Verify Tools ==='
-                // Verify versions of Git, Python, Node.js, and npm installed on Windows host
                 bat 'git --version'
                 bat 'python --version'
                 bat 'node --version'
@@ -34,7 +29,6 @@ pipeline {
             steps {
                 echo '=== Stage: Backend Install Dependencies ==='
                 dir('backend') {
-                    // Create virtual environment if not present and install backend package dependencies
                     bat '''
                     if not exist .venv (
                         echo Creating Python virtual environment...
@@ -51,7 +45,6 @@ pipeline {
             steps {
                 echo '=== Stage: Backend Run Tests ==='
                 dir('backend') {
-                    // Run test suite using pytest from the virtual environment
                     bat '.venv\\Scripts\\pytest'
                 }
             }
@@ -61,7 +54,7 @@ pipeline {
             steps {
                 echo '=== Stage: Frontend Install Dependencies ==='
                 dir('frontend') {
-                    // Install all Node.js dependencies for the Next.js frontend
+
                     bat 'npm install'
                 }
             }
@@ -71,7 +64,7 @@ pipeline {
             steps {
                 echo '=== Stage: Frontend Build ==='
                 dir('frontend') {
-                    // Build production optimized frontend assets
+                
                     bat 'npm run build'
                 }
             }
