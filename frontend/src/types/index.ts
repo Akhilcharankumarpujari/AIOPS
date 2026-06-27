@@ -101,19 +101,40 @@ export interface NodeMetric {
 export interface PodMetric {
   pod_name: string;
   namespace: string;
-  cpu_usage_cores: number;
-  memory_usage_bytes: number;
+  cpu_cores: number;
+  memory_bytes: number;
   restarts: number;
   status: string;
 }
 
+export interface NodeSummary {
+  total: number;
+  ready: number;
+  not_ready: number;
+}
+
+export interface PodSummary {
+  total: number;
+  running: number;
+  pending: number;
+  failed: number;
+  unknown: number;
+}
+
+export interface ClusterHealthResponse {
+  status: string;
+  nodes: NodeSummary;
+  pods: PodSummary;
+  namespaces: string[];
+}
+
 export interface ClusterMetrics {
-  cpu_usage_pct: number;
-  memory_usage_pct: number;
-  disk_usage_pct: number;
-  pods_count: number;
-  nodes_count: number;
-  active_deployments: number;
+  nodes_total: number;
+  nodes_ready: number;
+  pods_total: number;
+  pods_running: number;
+  pods_failed: number;
+  namespaces?: { namespace: string; pod_count: number; cpu_cores: number; memory_bytes: number }[];
 }
 
 // Loki Log Types

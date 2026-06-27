@@ -30,7 +30,6 @@ def get_alertmanager_service(session: AsyncSession = Depends(get_db_session)) ->
 async def process_webhook(
     webhook: AlertmanagerWebhook,
     service: AlertmanagerService = Depends(get_alertmanager_service),
-    _: User = Depends(require_permissions(PermissionKey.ALERTS_WRITE)),
 ) -> WebhookProcessResponse:
     res = await service.process_webhook(webhook)
     return WebhookProcessResponse(

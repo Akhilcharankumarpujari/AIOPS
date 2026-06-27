@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { prometheusService } from '@/services/prometheus.service';
 import { k8sService } from '@/services/k8s.service';
@@ -18,31 +18,37 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { RefreshCw, Cpu, Activity, HardDrive, Network } from 'lucide-react';
-
-const MOCK_TIME_SERIES = [
-  { time: '12:00', cpu: 34, mem: 56, net: 120 },
-  { time: '12:05', cpu: 40, mem: 58, net: 130 },
-  { time: '12:10', cpu: 55, mem: 60, net: 210 },
-  { time: '12:15', cpu: 32, mem: 57, net: 160 },
-  { time: '12:20', cpu: 75, mem: 68, net: 340 },
-  { time: '12:25', cpu: 62, mem: 65, net: 280 },
-  { time: '12:30', cpu: 48, mem: 61, net: 220 },
-];
+import { RefreshCw, Cpu, Activity, HardDrive, Network, AlertTriangle } from 'lucide-react';
 
 export default function MonitoringPage() {
   const { toast } = useToast();
   const [selectedNamespace, setSelectedNamespace] = useState('all');
+  const [start, setStart] = useState<string>('');
+  const [end, setEnd] = useState<string>('');
 
-  // Fetch real node stats
-  const { data: nodeMetrics, isLoading: nodesLoading, refetch: refetchNodes } = useQuery({
+  useEffect(() => {
+    setStart(new Date(Date.now() - 3600 * 1000).toISOString());
+    setEnd(new Date().toISOString());
+  }, []);
+
+  // --- QUERY HOOKS ---
+  const { 
+    data: nodeMetrics, 
+    isLoading: nodesLoading, 
+    error: nodesError,
+    refetch: refetchNodes 
+  } = useQuery({
     queryKey: ['nodeMetrics'],
     queryFn: prometheusService.getNodesMetrics,
-    refetchInterval: 15000, // Refresh every 15 seconds!
+    refetchInterval: 15000,
   });
 
-  // Fetch real pod stats
-  const { data: podMetrics, isLoading: podsLoading, refetch: refetchPods } = useQuery({
+  const { 
+    data: podMetrics, 
+    isLoading: podsLoading, 
+    error: podsError,
+    refetch: refetchPods 
+  } = useQuery({
     queryKey: ['podMetrics', selectedNamespace],
     queryFn: () => prometheusService.getPodsMetrics(selectedNamespace),
     refetchInterval: 15000,
@@ -51,6 +57,43 @@ export default function MonitoringPage() {
   const { data: namespaces } = useQuery({
     queryKey: ['namespaces'],
     queryFn: k8sService.listNamespaces,
+  });
+
+  // Prometheus range time-series queries
+  const { data: cpuHistory } = useQuery({
+    queryKey: ['cpuHistoryMonitor', start, end],
+    queryFn: () => prometheusService.getHistoricalMetrics(
+      '100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])))',
+      start,
+      end,
+      120
+    ),
+    enabled: !!start && !!end,
+    refetchInterval: 15000,
+  });
+
+  const { data: memHistory } = useQuery({
+    queryKey: ['memHistoryMonitor', start, end],
+    queryFn: () => prometheusService.getHistoricalMetrics(
+      'avg(100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)))',
+      start,
+      end,
+      120
+    ),
+    enabled: !!start && !!end,
+    refetchInterval: 15000,
+  });
+
+  const { data: netHistory } = useQuery({
+    queryKey: ['netHistoryMonitor', start, end],
+    queryFn: () => prometheusService.getHistoricalMetrics(
+      '(sum(rate(node_network_receive_bytes_total[5m])) + sum(rate(node_network_transmit_bytes_total[5m]))) / 1024 / 1024',
+      start,
+      end,
+      120
+    ),
+    enabled: !!start && !!end,
+    refetchInterval: 15000,
   });
 
   const handleManualRefresh = () => {
@@ -63,6 +106,68 @@ export default function MonitoringPage() {
     { value: 'all', label: 'All Namespaces' },
     ...(namespaces || []).map((ns) => ({ value: ns.name, label: ns.name })),
   ];
+
+  // Combine CPU, Mem and Network history into unified chart array
+  const combineHistoryData = () => {
+    const dataMap: Record<string, { time: string; cpu: number; mem: number; net: number }> = {};
+
+    const processSeries = (res: { series?: { samples: { timestamp: string; value: number }[] }[] } | undefined, key: 'cpu' | 'mem' | 'net') => {
+      if (!res || !res.series || res.series.length === 0) return;
+      res.series[0].samples.forEach((sample) => {
+        const timeStr = new Date(sample.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (!dataMap[timeStr]) {
+          dataMap[timeStr] = { time: timeStr, cpu: 0, mem: 0, net: 0 };
+        }
+        dataMap[timeStr][key] = Math.round(sample.value * 100) / 100;
+      });
+    };
+
+    processSeries(cpuHistory, 'cpu');
+    processSeries(memHistory, 'mem');
+    processSeries(netHistory, 'net');
+
+    return Object.values(dataMap).sort((a, b) => a.time.localeCompare(b.time));
+  };
+
+  const chartData = combineHistoryData();
+  const isHistoryChartEmpty = chartData.length === 0;
+
+  // --- LOADING STATE ---
+  if (nodesLoading || podsLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-16 bg-zinc-800/30 rounded-lg"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-72 bg-zinc-800/20 rounded-lg"></div>
+          <div className="h-72 bg-zinc-800/20 rounded-lg"></div>
+        </div>
+        <div className="h-60 bg-zinc-800/20 rounded-lg"></div>
+      </div>
+    );
+  }
+
+  // --- ERROR STATE ---
+  if (nodesError || podsError) {
+    return (
+      <div className="h-[30rem] flex flex-col items-center justify-center text-center space-y-4">
+        <div className="p-3 bg-red-500/15 rounded-full border border-red-500/20">
+          <AlertTriangle className="h-8 w-8 text-red-500" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-zinc-100">Metrics Fetch Failed</h3>
+          <p className="text-sm text-zinc-400 max-w-md mt-1">
+            Could not retrieve cluster metrics from Prometheus. Check if the Prometheus server is running.
+          </p>
+        </div>
+        <button
+          onClick={handleManualRefresh}
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-medium text-xs transition-colors"
+        >
+          Retry Fetching
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -84,7 +189,7 @@ export default function MonitoringPage() {
           className="text-zinc-400 hover:text-white border-zinc-800 flex items-center gap-2"
           onClick={handleManualRefresh}
         >
-          <RefreshCw className="h-4 w-4 animate-spin-slow" />
+          <RefreshCw className="h-4 w-4" />
           Force Reload
         </Button>
       </div>
@@ -101,26 +206,33 @@ export default function MonitoringPage() {
             </span>
           </CardHeader>
           <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MOCK_TIME_SERIES}>
-                <defs>
-                  <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="time" stroke="#71717a" />
-                <YAxis stroke="#71717a" />
-                <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', color: '#fff' }} />
-                <Area type="monotone" dataKey="cpu" name="CPU (%)" stroke="#8b5cf6" fillOpacity={1} fill="url(#cpuGrad)" strokeWidth={2} />
-                <Area type="monotone" dataKey="mem" name="Memory (%)" stroke="#6366f1" fillOpacity={1} fill="url(#memGrad)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            {isHistoryChartEmpty ? (
+              <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-2">
+                <Activity className="h-8 w-8 text-zinc-700 animate-pulse" />
+                <span className="text-xs">No Node CPU/Memory metrics available from Prometheus</span>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="time" stroke="#71717a" />
+                  <YAxis stroke="#71717a" />
+                  <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', color: '#fff' }} />
+                  <Area type="monotone" dataKey="cpu" name="CPU (%)" stroke="#8b5cf6" fillOpacity={1} fill="url(#cpuGrad)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="mem" name="Memory (%)" stroke="#6366f1" fillOpacity={1} fill="url(#memGrad)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -133,15 +245,22 @@ export default function MonitoringPage() {
             </span>
           </CardHeader>
           <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MOCK_TIME_SERIES}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="time" stroke="#71717a" />
-                <YAxis stroke="#71717a" />
-                <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', color: '#fff' }} />
-                <Area type="monotone" dataKey="net" name="Bandwidth (MB/s)" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            {isHistoryChartEmpty ? (
+              <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-2">
+                <Activity className="h-8 w-8 text-zinc-700 animate-pulse" />
+                <span className="text-xs">No Network Bandwidth metrics available from Prometheus</span>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="time" stroke="#71717a" />
+                  <YAxis stroke="#71717a" />
+                  <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', color: '#fff' }} />
+                  <Area type="monotone" dataKey="net" name="Bandwidth (MB/s)" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -156,9 +275,7 @@ export default function MonitoringPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          {nodesLoading ? (
-            <div className="h-32 flex items-center justify-center text-zinc-500 text-xs">Polling node metrics...</div>
-          ) : !nodeMetrics || nodeMetrics.length === 0 ? (
+          {!nodeMetrics || nodeMetrics.length === 0 ? (
             <div className="h-32 flex items-center justify-center text-zinc-500 text-xs">No active node metrics available</div>
           ) : (
             <table className="w-full text-left text-xs border-collapse">
@@ -206,9 +323,7 @@ export default function MonitoringPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          {podsLoading ? (
-            <div className="h-32 flex items-center justify-center text-zinc-500 text-xs">Polling active pod metrics...</div>
-          ) : !podMetrics || podMetrics.length === 0 ? (
+          {!podMetrics || podMetrics.length === 0 ? (
             <div className="h-32 flex items-center justify-center text-zinc-500 text-xs">No active pod metrics inside selected namespace</div>
           ) : (
             <table className="w-full text-left text-xs border-collapse">
@@ -227,8 +342,8 @@ export default function MonitoringPage() {
                   <tr key={pod.pod_name} className="border-b border-zinc-800/40 hover:bg-zinc-800/20">
                     <td className="py-3 px-4 font-semibold text-zinc-200">{pod.pod_name}</td>
                     <td className="py-3 px-4 text-zinc-400">{pod.namespace}</td>
-                    <td className="py-3 px-4 font-mono text-zinc-300">{(pod.cpu_usage_cores * 1000).toFixed(0)}m</td>
-                    <td className="py-3 px-4 font-mono text-zinc-300">{(pod.memory_usage_bytes / (1024 * 1024)).toFixed(1)} MiB</td>
+                    <td className="py-3 px-4 font-mono text-zinc-300">{(pod.cpu_cores * 1000).toFixed(0)}m</td>
+                    <td className="py-3 px-4 font-mono text-zinc-300">{(pod.memory_bytes / (1024 * 1024)).toFixed(1)} MiB</td>
                     <td className="py-3 px-4 text-zinc-300">{pod.restarts}</td>
                     <td className="py-3 px-4">
                       <Badge variant={pod.status === 'Running' ? 'success' : 'warning'}>{pod.status}</Badge>

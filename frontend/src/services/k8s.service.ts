@@ -1,9 +1,9 @@
 import { apiClient } from './api-client';
-import { Namespace, Pod, Deployment, Service, K8sNode, K8sEvent, ClusterMetrics } from '@/types';
+import { Namespace, Pod, Deployment, Service, K8sNode, K8sEvent, ClusterHealthResponse } from '@/types';
 
 export const k8sService = {
   getClusterHealth: async () => {
-    const { data } = await apiClient.get<ClusterMetrics>('/api/v1/k8s/cluster/health');
+    const { data } = await apiClient.get<ClusterHealthResponse>('/api/v1/k8s/cluster/health');
     return data;
   },
 
