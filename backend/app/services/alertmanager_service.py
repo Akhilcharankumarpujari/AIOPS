@@ -136,7 +136,7 @@ class AlertmanagerService:
                 db_alert.ends_at = ends_at
                 db_alert.labels = alert_data.labels
                 db_alert.annotations = alert_data.annotations
-                db_alert.raw_payload = alert_data.model_dump()
+                db_alert.raw_payload = alert_data.model_dump(mode="json")
                 if system_id:
                     db_alert.system_id = system_id
                 alert_obj = db_alert
@@ -154,7 +154,7 @@ class AlertmanagerService:
                     ends_at=ends_at,
                     labels=alert_data.labels,
                     annotations=alert_data.annotations,
-                    raw_payload=alert_data.model_dump(),
+                    raw_payload=alert_data.model_dump(mode="json"),
                 )
                 self.session.add(alert_obj)
                 await self.session.flush()
